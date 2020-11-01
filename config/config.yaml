@@ -1,0 +1,17 @@
+web:
+  api_host: 0.0.0.0:7000
+  debug_host: 0.0.0.0:8000
+  read_timeout: 5
+  write_timeout: 5
+  shutdown_timeout: 5
+zipkin:
+  local_endpoint: 0.0.0.0:9411
+  reporter_uri: http://zipkin:9411/api/v2/spans
+  service_name: reader
+  probability: 0.05
+database:
+  user: postgres
+  password: postgres
+  host: 0.0.0.0:5433
+  name: nimbler_keys
+  disable_tls: true

@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package nimbler_key_generator;
+
+service KeyGenerator {
+  rpc HealthCheck(HealthCheckRequest) returns (HealthCheckResponse) {}
+  rpc GetKey(GetKeyRequest) returns (GetKeyResponse) {}
+  rpc GenerateKeys(GenerateKeysRequest) returns (GenerateKeysResponse) {}
+  rpc ReuseKeys(ReuseKeysRequest) returns (ReuseKeysResponse) {}
+}
+
+message HealthCheckRequest {
+}
+
+message HealthCheckResponse {
+  string version = 1;
+}
+
+message GetKeyRequest {
+}
+
+message GetKeyResponse {
+  string key = 1;
+}
+
+message GenerateKeysRequest {
+  int32 count = 1;
+}
+
+message GenerateKeysResponse {
+}
+
+message ReuseKeysRequest {
+  repeated string keys = 1;
+}
+
+message ReuseKeysResponse {
+}
