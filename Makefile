@@ -11,6 +11,14 @@ migrate:
 seed: migrate
 	go run ./cmd/admin/main.go seed
 
+key-generator:
+	docker build \
+		-f dockerfile.key_generator \
+		-t igorgomonov/key-generator-api-amd64:1.0 \
+		--build-arg PACKAGE_NAME=api \
+		--build-arg VCS_REF=`git rev-parse HEAD` \
+		--build-arg BUILD_DATE=`date -u +”%Y-%m-%dT%H:%M:%SZ”` \
+		.
 up:
 	docker-compose up
 

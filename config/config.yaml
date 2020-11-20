@@ -12,6 +12,6 @@ zipkin:
 database:
   user: postgres
   password: postgres
-  host: 0.0.0.0:5433
+  host: 0.0.0.0
   name: nimbler_keys
   disable_tls: true

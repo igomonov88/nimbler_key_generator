@@ -2,15 +2,23 @@ package storage
 
 import (
 	"context"
+	"database/sql"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
 
-// ErrNotFound is used when a key is not found in keys table so in that case we will need
-// to generate key and put it to database.
-var ErrNotFound = errors.New("Key not found")
+var (
+	// ErrNotFound is used when a key is not found in keys table so in that case we will
+	// need to generate key and put it to database.
+	ErrNotFound = errors.New("Key not found")
+
+	// ErrNoKeys is used when we try to get generated key from database and where is no
+	// generated key in database. That means that we need to generate key and put it to
+	// database.
+	ErrNoKeys = errors.New("No keys found")
+)
 
 // AddGeneratedKeys add a slice of generated keys to keys table.
 func AddGeneratedKeys(ctx context.Context, db *sqlx.DB, keys []string) error {
@@ -57,41 +65,49 @@ func GetKey(ctx context.Context, db *sqlx.DB) (string, error) {
 
 	row := tx.QueryRowContext(ctx, getQuery)
 	if err := row.Scan(&key.ID, &key.Value, &key.IsUsed); err != nil {
-		if err := tx.Rollback(); err != nil {
-			return "", errors.Wrapf(err, "failed to roll back transaction")
+		switch err {
+		case sql.ErrNoRows:
+			if err := tx.Rollback(); err != nil {
+				return "", errors.Wrapf(err, "failed to roll back transaction")
+			}
+
+			return key.Value, ErrNoKeys
+		default:
+			if err := tx.Rollback(); err != nil {
+				return "", errors.Wrapf(err, "failed to roll back transaction")
+			}
+
+			return key.Value, errors.Wrap(err, "selecting key from keys table")
 		}
-		return key.Value, errors.Wrapf(err, "selecting key from keys table")
 	}
 
 	if _, err := tx.ExecContext(ctx, updateQuery, key.Value); err != nil {
 		if err := tx.Rollback(); err != nil {
 			return "", errors.Wrapf(err, "failed to roll back transaction")
 		}
-		return key.Value, errors.Wrapf(err, "updating is_used parameter in keys table ")
+
+		return "", errors.Wrapf(err, "failed to update keys table")
 	}
 
 	if err := tx.Commit(); err != nil {
-		if err := tx.Rollback(); err != nil {
-			return "", errors.Wrapf(err, "failed to roll back transaction")
-		}
-		return key.Value, errors.Wrapf(err, "commit result of tra ")
+		return "", errors.Wrap(err, "failed to commit changes in keys table")
 	}
 
 	return key.Value, nil
 }
 
-// AddKey used only then all of the generate kyes are used and we go out of generate keys
+// AddKey used only then all of the generate keys are used and we go out of generate keys
 // per day capacity. In that keys we generate key by keygen package, add it to keys table
 // and if key is successfully inserted to keys table, we return generated key.
 // it returns is not used by anyone.
-func AddKey(ctx context.Context, db *sqlx.DB, key string) error {
+func AddKey(ctx context.Context, db *sqlx.DB, key string, used bool) error {
 	ctx, span := trace.StartSpan(ctx, "internal.storage.AddKey")
 	defer span.End()
 
 	const query = `INSERT INTO keys (key, is_used) VALUES ($1, $2)`
 
-	if _, err := db.ExecContext(ctx, query, key, false); err != nil {
-		return errors.Wrapf(err, "inserting generated key to keys")
+	if _, err := db.ExecContext(ctx, query, key, used); err != nil {
+		return errors.Wrap(err, "inserting generated key to keys")
 	}
 
 	return nil

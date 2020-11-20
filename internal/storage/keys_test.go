@@ -52,7 +52,7 @@ func TestGetKeys(t *testing.T) {
 			t.Fatalf("\t%s\tShould be able to generate key: %s", tests.Failed, err)
 		}
 
-		if err := storage.AddKey(context.Background(), db, key); err != nil {
+		if err := storage.AddKey(context.Background(), db, key, false); err != nil {
 			t.Fatalf("\t%s\tShould be able to add generated key to storage: %s", tests.Failed, err)
 		}
 

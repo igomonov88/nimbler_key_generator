@@ -9,12 +9,21 @@ networks:
     driver: bridge
 
 services:
-  db:
-    container_name: nimbler_keys_db
-    environment:
-      - POSTGRES_PASSWORD=postgres
+#  db:
+ #   container_name: nimbler_db
+  #  environment:
+   #   - POSTGRES_PASSWORD=postgres
+    #networks:
+     # - shared-network
+    #image: postgres:11.1-alpine
+    #ports:
+     # - 5433:5432
+    # This is the core CRUD based service.
+  key-generator-api:
+    container_name: key-generator
     networks:
       - shared-network
-    image: postgres:11.1-alpine
+    image: igorgomonov/key-generator-amd64:1.0
     ports:
-      - 5433:5432
+      - 7000:7000 # CRUD API
+      - 8000:8000 # DEBUG API

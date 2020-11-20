@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"context"
-	"database/sql"
 	"net/http"
 
 	"go.opencensus.io/trace"
@@ -22,7 +21,7 @@ func (s *Server) GetKey(ctx context.Context, req *pb.GetKeyRequest) (*pb.GetKeyR
 	key, err := storage.GetKey(ctx, s.DB)
 	if err != nil {
 		switch err {
-		case sql.ErrNoRows:
+		case storage.ErrNoKeys:
 
 			// If we can't get generated key from database due to no rows result,
 			// which can happened when all quota generated keys are used, we will
@@ -33,7 +32,7 @@ func (s *Server) GetKey(ctx context.Context, req *pb.GetKeyRequest) (*pb.GetKeyR
 			}
 
 			// Add generated key to database
-			if err := storage.AddKey(ctx, s.DB, key); err != nil {
+			if err := storage.AddKey(ctx, s.DB, key, true); err != nil {
 				return &pb.GetKeyResponse{}, status.Error(http.StatusInternalServerError, err.Error())
 			}
 

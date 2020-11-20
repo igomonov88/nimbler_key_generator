@@ -1,0 +1,50 @@
+# Build the Go Binary.
+FROM golang:1.13 as build-key-generator-api
+ENV CGO_ENABLED 0
+ARG VCS_REF
+ARG PACKAGE_NAME
+ARG PACKAGE_PREFIX
+
+# Create a location in the container for the source code. Using the
+# default GOPATH location.
+RUN mkdir -p /service
+
+# Copy the module files first and then download the dependencies. If this
+# doesn't change, we won't need to do this again in future builds.
+# COPY go.* /service/
+# WORKDIR /service
+# RUN go mod download
+
+# Copy the source code into the container.
+WORKDIR /service
+COPY go.* ./
+COPY cmd cmd
+COPY config config
+COPY internal internal
+COPY proto proto
+COPY go.mod .
+COPY go.sum .
+
+RUN go mod download
+
+# Build the admin tool so we can have it in the container. This should change
+# often so do this first.
+WORKDIR /service/cmd/admin
+RUN go build -ldflags "-X main.build=${VCS_REF}"
+
+# Build the service binary. We are doing this last since this will be different
+# every time we run through this process.
+WORKDIR /service/cmd/${PACKAGE_NAME}
+RUN go build -ldflags "-X main.build=${VCS_REF}"
+
+
+# Run the Go Binary in Alpine.
+FROM alpine:3.7
+ARG BUILD_DATE
+ARG VCS_REF
+ARG PACKAGE_NAME
+ARG PACKAGE_PREFIX
+COPY --from=build-key-generator-api /service/cmd/admin /app/admin
+COPY --from=build-key-generator-api /service/cmd/${PACKAGE_NAME} /app/main
+WORKDIR /app
+CMD /app/main
